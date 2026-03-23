@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FormAPI Craft — Visual Form Builder for PocketMine-MP</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;
+  --text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#1f6feb;
+  --green:#3fb950;--red:#f85149;--orange:#d29922;--radius:12px;
+  --mc-bg:rgba(0,0,0,.75);--mc-btn:#3c3c3c;--mc-btn-hover:#525252;
+  --mc-border:#1e1e1e;--mc-text:#fff;--mc-toggle-on:#4c8c2b;--mc-toggle-off:#8b8b8b;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.header h1{font-size:1.1rem;font-weight:700}.header h1 span{color:var(--green)}
+.header-nav{display:flex;gap:8px}
+.header-nav a{color:var(--text2);text-decoration:none;font-size:.85rem;padding:6px 12px;border-radius:6px;transition:all .15s}
+.header-nav a:hover{background:var(--bg3);color:var(--text)}
+.header-nav a.active{background:var(--accent2);color:#fff}
+
+/* LAYOUT */
+.app{display:grid;grid-template-columns:260px 1fr 300px;height:calc(100vh - 53px);overflow:hidden}
+@media(max-width:1000px){.app{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}}
+
+/* SIDEBAR LEFT — PALETTE */
+.palette{background:var(--bg2);border-right:1px solid var(--border);padding:16px;overflow-y:auto}
+.palette h3{font-size:.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;font-weight:600}
+.palette-section{margin-bottom:20px}
+
+/* Form type selector */
+.form-type-selector{display:flex;gap:4px;margin-bottom:16px}
+.form-type-btn{flex:1;padding:8px 4px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:600;text-align:center;transition:all .15s}
+.form-type-btn:hover{border-color:var(--accent);color:var(--text)}
+.form-type-btn.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+
+/* Draggable elements */
+.palette-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:grab;transition:all .15s;display:flex;align-items:center;gap:10px;font-size:.85rem}
+.palette-item:hover{border-color:var(--accent);background:rgba(88,166,255,.06)}
+.palette-item:active{cursor:grabbing;transform:scale(.97)}
+.palette-item .icon{font-size:1.1rem;width:24px;text-align:center}
+.palette-item .info{flex:1}
+.palette-item .info .name{font-weight:600;font-size:.82rem}
+.palette-item .info .desc{font-size:.7rem;color:var(--text2)}
+
+/* Form settings in palette */
+.form-settings{margin-bottom:16px}
+.form-field{margin-bottom:8px}
+.form-field label{display:block;font-size:.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;font-weight:600}
+.form-field input,.form-field textarea,.form-field select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:.85rem;outline:none;resize:vertical;font-family:inherit}
+.form-field input:focus,.form-field textarea:focus,.form-field select:focus{border-color:var(--accent)}
+.form-field textarea{min-height:50px}
+
+/* CENTER — PREVIEW */
+.preview-area{display:flex;align-items:center;justify-content:center;background:#2a2a2a;background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='g' patternUnits='userSpaceOnUse' width='60' height='60'%3E%3Cpath d='M0 0h60v60H0z' fill='%23222'/%3E%3Cpath d='M30 0v60M0 30h60' stroke='%23333' stroke-width='.5'/%3E%3C/pattern%3E%3C/defs%3E%3Crect fill='url(%23g)' width='100%25' height='100%25'/%3E%3C/svg%3E");overflow:auto;padding:24px;position:relative}
+
+/* Minecraft Form Preview */
+.mc-form{background:var(--mc-bg);border:3px solid #444;border-radius:4px;width:340px;min-height:200px;color:var(--mc-text);font-family:'Segoe UI',Arial,sans-serif;position:relative;user-select:none;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.mc-form-header{padding:14px 16px 8px;text-align:center}
+.mc-form-title{font-size:1rem;font-weight:700;margin-bottom:4px;word-break:break-word}
+.mc-form-content{font-size:.8rem;color:#ccc;padding:0 16px 8px;text-align:center;word-break:break-word}
+.mc-form-body{padding:8px 12px;display:flex;flex-direction:column;gap:6px;min-height:60px}
+.mc-form-footer{padding:8px 12px 14px}
+
+/* MC Button */
+.mc-btn{background:linear-gradient(to bottom,#6c6c6c,#585858);border:2px solid;border-color:#999 #3d3d3d #3d3d3d #999;padding:8px 12px;color:#fff;text-align:center;font-size:.82rem;font-weight:600;cursor:pointer;position:relative;display:flex;align-items:center;gap:8px;transition:background .1s;min-height:36px}
+.mc-btn:hover{background:linear-gradient(to bottom,#7a7a7a,#666)}
+.mc-btn.selected{outline:2px solid var(--accent);outline-offset:2px}
+.mc-btn .mc-btn-icon{width:24px;height:24px;image-rendering:pixelated;flex-shrink:0}
+.mc-btn .mc-btn-text{flex:1;text-align:center}
+
+/* MC Input */
+.mc-input-wrap{margin-bottom:2px}
+.mc-input-label{font-size:.72rem;color:#aaa;margin-bottom:2px;padding-left:2px}
+.mc-input{background:#2a2a2a;border:2px solid;border-color:#3d3d3d #999 #999 #3d3d3d;padding:6px 8px;color:#fff;font-size:.82rem;width:100%;outline:none}
+.mc-input.selected{outline:2px solid var(--accent);outline-offset:2px}
+
+/* MC Dropdown */
+.mc-dropdown{background:#2a2a2a;border:2px solid;border-color:#3d3d3d #999 #999 #3d3d3d;padding:6px 8px;color:#fff;font-size:.82rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.mc-dropdown::after{content:'▼';font-size:.6rem;color:#aaa}
+.mc-dropdown.selected{outline:2px solid var(--accent);outline-offset:2px}
+
+/* MC Slider */
+.mc-slider-wrap{margin-bottom:2px}
+.mc-slider-label{font-size:.72rem;color:#aaa;display:flex;justify-content:space-between;margin-bottom:2px;padding:0 2px}
+.mc-slider-track{height:10px;background:#2a2a2a;border:2px solid;border-color:#3d3d3d #999 #999 #3d3d3d;position:relative;cursor:pointer}
+.mc-slider-fill{height:100%;background:var(--mc-toggle-on);position:absolute;left:0;top:0}
+.mc-slider-track.selected{outline:2px solid var(--accent);outline-offset:2px}
+
+/* MC StepSlider */
+.mc-step-wrap{margin-bottom:2px}
+.mc-step-label{font-size:.72rem;color:#aaa;margin-bottom:2px;padding-left:2px}
+.mc-step-track{height:10px;background:#2a2a2a;border:2px solid;border-color:#3d3d3d #999 #999 #3d3d3d;position:relative;cursor:pointer}
+.mc-step-fill{height:100%;background:var(--mc-toggle-on);position:absolute;left:0;top:0}
+.mc-step-value{font-size:.72rem;color:#ddd;text-align:center;margin-top:2px}
+.mc-step-track.selected{outline:2px solid var(--accent);outline-offset:2px}
+
+/* MC Toggle */
+.mc-toggle-wrap{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
+.mc-toggle-wrap .mc-toggle-text{font-size:.82rem;color:#ccc}
+.mc-toggle{width:44px;height:22px;border-radius:11px;position:relative;cursor:pointer;transition:background .2s}
+.mc-toggle.on{background:var(--mc-toggle-on)}
+.mc-toggle.off{background:var(--mc-toggle-off)}
+.mc-toggle::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:2px;transition:left .2s}
+.mc-toggle.on::after{left:24px}
+.mc-toggle.off::after{left:2px}
+.mc-toggle-wrap.selected{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* MC Label */
+.mc-label-text{font-size:.82rem;color:#ccc;padding:4px 0}
+.mc-label-text.selected{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* MC Modal buttons */
+.mc-modal-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 12px 14px}
+.mc-modal-btn{background:linear-gradient(to bottom,#6c6c6c,#585858);border:2px solid;border-color:#999 #3d3d3d #3d3d3d #999;padding:10px;color:#fff;text-align:center;font-size:.85rem;font-weight:600;cursor:pointer}
+
+/* Drop indicator */
+.drop-indicator{height:3px;background:var(--accent);border-radius:2px;margin:2px 0;opacity:0;transition:opacity .15s}
+.drop-indicator.active{opacity:1}
+
+/* Element drag overlay */
+.element-dragging{opacity:.5}
+
+/* SIDEBAR RIGHT — PROPERTIES */
+.properties{background:var(--bg2);border-left:1px solid var(--border);padding:16px;overflow-y:auto}
+.properties h3{font-size:.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;font-weight:600}
+.props-empty{color:var(--text2);font-size:.85rem;text-align:center;padding:40px 0}
+.prop-group{margin-bottom:16px}
+.prop-group h4{font-size:.72rem;color:var(--accent);text-transform:uppercase;margin-bottom:8px}
+.prop-field{margin-bottom:8px}
+.prop-field label{display:block;font-size:.7rem;color:var(--text2);margin-bottom:3px;font-weight:600}
+.prop-field input,.prop-field textarea,.prop-field select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:.85rem;outline:none;font-family:inherit}
+.prop-field input:focus,.prop-field textarea:focus,.prop-field select:focus{border-color:var(--accent)}
+.prop-field textarea{min-height:40px;resize:vertical}
+
+.prop-actions{display:flex;gap:6px;margin-top:12px}
+.btn{padding:8px 14px;border:none;border-radius:6px;font-weight:600;font-size:.82rem;cursor:pointer;transition:all .15s}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:var(--accent2);color:#fff}
+.btn-danger{background:var(--red);color:#fff}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.btn-outline:hover{background:var(--bg3);color:var(--text)}
+.btn-green{background:var(--green);color:#000}
+.btn-sm{padding:6px 10px;font-size:.78rem}
+.btn-block{width:100%}
+
+/* Move buttons */
+.move-btns{display:flex;gap:4px}
+.move-btns .btn{padding:4px 8px;font-size:.75rem}
+
+/* EXPORT MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);width:90%;max-width:700px;max-height:85vh;display:flex;flex-direction:column}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.modal-header h2{font-size:1rem;font-weight:700}
+.modal-body{padding:20px;overflow-y:auto;flex:1}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+
+.code-block{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:.8rem;line-height:1.6;overflow-x:auto;white-space:pre-wrap;color:var(--text);tab-size:4;max-height:400px;overflow-y:auto}
+.code-block .kw{color:#ff7b72}
+.code-block .fn{color:#d2a8ff}
+.code-block .str{color:#a5d6ff}
+.code-block .var{color:#ffa657}
+.code-block .cm{color:#8b949e}
+.code-block .num{color:#79c0ff}
+
+/* Export options */
+.export-options{display:flex;gap:8px;margin-bottom:16px}
+.export-opt{padding:6px 12px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;transition:all .15s}
+.export-opt:hover{border-color:var(--accent);color:var(--text)}
+.export-opt.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+
+/* Toast */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:8px 20px;border-radius:20px;font-weight:700;font-size:.85rem;z-index:200;pointer-events:none;opacity:0;transition:opacity .2s}
+.toast.show{opacity:1}
+
+/* Responsive */
+@media(max-width:1000px){
+  .palette,.properties{max-height:40vh}
+  .app{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+}
+
+/* Icon options grid */
+.icon-type-row{display:flex;gap:4px;margin-bottom:6px}
+.icon-type-btn{flex:1;padding:4px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);border-radius:4px;cursor:pointer;font-size:.7rem;text-align:center;transition:all .15s}
+.icon-type-btn.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+
+/* Options list editor */
+.options-list{margin-top:4px}
+.option-row{display:flex;gap:4px;margin-bottom:4px;align-items:center}
+.option-row input{flex:1}
+.option-row .btn{padding:4px 8px}
+.add-option-btn{width:100%;padding:6px;border:1px dashed var(--border);background:transparent;color:var(--text2);border-radius:6px;cursor:pointer;font-size:.78rem;margin-top:4px;transition:all .15s}
+.add-option-btn:hover{border-color:var(--accent);color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1><span>FormAPI</span> Craft</h1>
+  <div class="header-nav">
+    <a href="https://github.com/w1zardz" style="color:var(--text2);font-size:.8rem">by w1zardz</a>
+  </div>
+</div>
+
+<div class="app">
+  <!-- LEFT PALETTE -->
+  <div class="palette">
+    <div class="palette-section">
+      <h3>Тип формы</h3>
+      <div class="form-type-selector">
+        <div class="form-type-btn active" data-type="simple">Simple</div>
+        <div class="form-type-btn" data-type="modal">Modal</div>
+        <div class="form-type-btn" data-type="custom">Custom</div>
+      </div>
+    </div>
+
+    <div class="palette-section form-settings">
+      <h3>Настройки формы</h3>
+      <div class="form-field">
+        <label>Заголовок</label>
+        <input type="text" id="formTitle" value="Мое меню" placeholder="Заголовок формы">
+      </div>
+      <div class="form-field">
+        <label>Описание</label>
+        <textarea id="formContent" placeholder="Текст под заголовком">Выберите действие:</textarea>
+      </div>
+    </div>
+
+    <div class="palette-section" id="elementsPanel">
+      <h3>Элементы <span style="font-size:.65rem;color:var(--text2)">(клик = добавить)</span></h3>
+      <!-- Filled by JS based on form type -->
+    </div>
+
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:6px">
+      <button class="btn btn-green btn-block" id="btnExport" style="font-size:.9rem;padding:10px">⬇ Экспорт PHP</button>
+      <button class="btn btn-outline btn-block btn-sm" id="btnClear">Очистить форму</button>
+      <button class="btn btn-outline btn-block btn-sm" id="btnImport">Импорт JSON</button>
+    </div>
+  </div>
+
+  <!-- CENTER PREVIEW -->
+  <div class="preview-area">
+    <div class="mc-form" id="mcPreview">
+      <div class="mc-form-header">
+        <div class="mc-form-title" id="mcTitle">Мое меню</div>
+        <div class="mc-form-content" id="mcContent">Выберите действие:</div>
+      </div>
+      <div class="mc-form-body" id="mcBody">
+        <!-- Elements render here -->
+      </div>
+      <div class="mc-form-footer" id="mcFooter"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PROPERTIES -->
+  <div class="properties" id="propsPanel">
+    <h3>Свойства элемента</h3>
+    <div class="props-empty" id="propsEmpty">Выбери элемент на превью для редактирования</div>
+    <div id="propsContent" style="display:none"></div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" id="exportModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Экспорт PHP-кода</h2>
+      <button class="btn btn-outline btn-sm" onclick="closeExport()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="export-options">
+        <div class="export-opt active" data-lib="formapi">FormAPI</div>
+        <div class="export-opt" data-lib="pmforms">pmforms</div>
+      </div>
+      <div class="code-block" id="codeOutput"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeExport()">Закрыть</button>
+      <button class="btn btn-primary" id="btnCopyCode">📋 Копировать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Импорт формы (JSON)</h2>
+      <button class="btn btn-outline btn-sm" onclick="closeImport()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.85rem;color:var(--text2);margin-bottom:12px">Вставь JSON экспортированной формы:</p>
+      <textarea id="importJson" style="width:100%;min-height:200px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-family:monospace;font-size:.85rem;resize:vertical"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeImport()">Отмена</button>
+      <button class="btn btn-primary" id="btnDoImport">Импорт</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Скопировано!</div>
+
+<script>
+// ==================== STATE ====================
+let formType = 'simple';
+let elements = [];
+let selectedIdx = -1;
+let exportLib = 'formapi';
+
+// ==================== ELEMENTS CONFIG ====================
+const SIMPLE_ELEMENTS = [
+  { type: 'button', icon: '🔘', name: 'Кнопка', desc: 'Кнопка с текстом и иконкой' }
+];
+const MODAL_ELEMENTS = []; // Modal has fixed structure
+const CUSTOM_ELEMENTS = [
+  { type: 'input', icon: '📝', name: 'Input', desc: 'Текстовое поле ввода' },
+  { type: 'dropdown', icon: '📋', name: 'Dropdown', desc: 'Выпадающий список' },
+  { type: 'slider', icon: '🎚', name: 'Slider', desc: 'Ползунок (min/max)' },
+  { type: 'step_slider', icon: '⏩', name: 'StepSlider', desc: 'Шаговый ползунок' },
+  { type: 'toggle', icon: '🔀', name: 'Toggle', desc: 'Вкл/Выкл переключатель' },
+  { type: 'label', icon: '🏷', name: 'Label', desc: 'Текстовая надпись' }
+];
+
+// ==================== DEFAULT ELEMENT FACTORIES ====================
+function createButton() {
+  return { type: 'button', text: 'Кнопка', iconType: -1, iconPath: '' };
+}
+function createInput() {
+  return { type: 'input', label: 'Введите текст', placeholder: 'Текст...', defaultValue: '' };
+}
+function createDropdown() {
+  return { type: 'dropdown', label: 'Выберите', options: ['Вариант 1', 'Вариант 2', 'Вариант 3'], defaultIndex: 0 };
+}
+function createSlider() {
+  return { type: 'slider', label: 'Значение', min: 0, max: 100, step: 1, defaultValue: 50 };
+}
+function createStepSlider() {
+  return { type: 'step_slider', label: 'Шаг', steps: ['Маленький', 'Средний', 'Большой'], defaultIndex: 1 };
+}
+function createToggle() {
+  return { type: 'toggle', label: 'Включить?', defaultValue: false };
+}
+function createLabel() {
+  return { type: 'label', text: 'Текст подсказки' };
+}
+
+const factories = { button: createButton, input: createInput, dropdown: createDropdown, slider: createSlider, step_slider: createStepSlider, toggle: createToggle, label: createLabel };
+
+// ==================== INIT ====================
+function init() {
+  // Default elements
+  elements = [createButton(), createButton()];
+  elements[0].text = 'Играть';
+  elements[0].iconType = 0;
+  elements[0].iconPath = 'textures/items/diamond_sword';
+  elements[1].text = 'Настройки';
+
+  renderPalette();
+  renderPreview();
+  bindFormSettings();
+  bindExport();
+}
+
+// ==================== FORM TYPE ====================
+document.querySelectorAll('.form-type-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.form-type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    formType = btn.dataset.type;
+
+    // Reset elements for new type
+    if (formType === 'simple') {
+      elements = [createButton(), createButton()];
+      elements[0].text = 'Играть';
+      elements[1].text = 'Настройки';
+    } else if (formType === 'modal') {
+      elements = [
+        { type: 'modal_btn1', text: 'Да' },
+        { type: 'modal_btn2', text: 'Нет' }
+      ];
+    } else {
+      elements = [createInput(), createToggle(), createSlider()];
+    }
+
+    selectedIdx = -1;
+    renderPalette();
+    renderPreview();
+    renderProperties();
+  });
+});
+
+// ==================== PALETTE ====================
+function renderPalette() {
+  const panel = document.getElementById('elementsPanel');
+  let items = [];
+
+  if (formType === 'simple') items = SIMPLE_ELEMENTS;
+  else if (formType === 'modal') items = [];
+  else items = CUSTOM_ELEMENTS;
+
+  if (items.length === 0) {
+    panel.innerHTML = '<h3>Элементы</h3><p style="font-size:.8rem;color:var(--text2)">Modal форма имеет фиксированную структуру: заголовок, текст и две кнопки.</p>';
+    return;
+  }
+
+  panel.innerHTML = '<h3>Элементы <span style="font-size:.65rem;color:var(--text2)">(клик = добавить)</span></h3>';
+  items.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'palette-item';
+    el.innerHTML = `<div class="icon">${item.icon}</div><div class="info"><div class="name">${item.name}</div><div class="desc">${item.desc}</div></div>`;
+    el.addEventListener('click', () => {
+      const newEl = factories[item.type]();
+      elements.push(newEl);
+      selectedIdx = elements.length - 1;
+      renderPreview();
+      renderProperties();
+    });
+    panel.appendChild(el);
+  });
+}
+
+// ==================== PREVIEW ====================
+function renderPreview() {
+  const title = document.getElementById('formTitle').value || 'Форма';
+  const content = document.getElementById('formContent').value || '';
+
+  document.getElementById('mcTitle').textContent = title;
+  document.getElementById('mcContent').textContent = content;
+  document.getElementById('mcContent').style.display = content ? '' : 'none';
+
+  const body = document.getElementById('mcBody');
+  const footer = document.getElementById('mcFooter');
+  body.innerHTML = '';
+  footer.innerHTML = '';
+
+  if (formType === 'simple') renderSimplePreview(body);
+  else if (formType === 'modal') renderModalPreview(body, footer);
+  else renderCustomPreview(body);
+}
+
+function renderSimplePreview(body) {
+  elements.forEach((el, idx) => {
+    const btn = document.createElement('div');
+    btn.className = 'mc-btn' + (idx === selectedIdx ? ' selected' : '');
+    btn.dataset.idx = idx;
+
+    let inner = '';
+    if (el.iconType >= 0 && el.iconPath) {
+      inner += `<div class="mc-btn-icon" style="background:#555;display:flex;align-items:center;justify-content:center;font-size:.6rem;border-radius:2px" title="${el.iconPath}">IMG</div>`;
+    }
+    inner += `<div class="mc-btn-text">${escHtml(el.text || 'Кнопка')}</div>`;
+    btn.innerHTML = inner;
+
+    btn.addEventListener('click', () => selectElement(idx));
+    body.appendChild(btn);
+  });
+}
+
+function renderModalPreview(body, footer) {
+  footer.innerHTML = '';
+  const btnsWrap = document.createElement('div');
+  btnsWrap.className = 'mc-modal-buttons';
+
+  const btn1Text = elements[0]?.text || 'Да';
+  const btn2Text = elements[1]?.text || 'Нет';
+
+  const b1 = document.createElement('div');
+  b1.className = 'mc-modal-btn' + (selectedIdx === 0 ? ' selected' : '');
+  b1.textContent = btn1Text;
+  b1.style.cursor = 'pointer';
+  b1.addEventListener('click', () => selectElement(0));
+
+  const b2 = document.createElement('div');
+  b2.className = 'mc-modal-btn' + (selectedIdx === 1 ? ' selected' : '');
+  b2.textContent = btn2Text;
+  b2.style.cursor = 'pointer';
+  b2.addEventListener('click', () => selectElement(1));
+
+  btnsWrap.appendChild(b1);
+  btnsWrap.appendChild(b2);
+  footer.appendChild(btnsWrap);
+}
+
+function renderCustomPreview(body) {
+  elements.forEach((el, idx) => {
+    const wrap = document.createElement('div');
+    wrap.dataset.idx = idx;
+    wrap.addEventListener('click', (e) => { e.stopPropagation(); selectElement(idx); });
+
+    if (el.type === 'input') {
+      wrap.className = 'mc-input-wrap';
+      wrap.innerHTML = `
+        <div class="mc-input-label">${escHtml(el.label || '')}</div>
+        <div class="mc-input${idx === selectedIdx ? ' selected' : ''}" style="color:#666">${escHtml(el.placeholder || el.defaultValue || '...')}</div>`;
+    } else if (el.type === 'dropdown') {
+      wrap.innerHTML = `
+        <div class="mc-input-label">${escHtml(el.label || '')}</div>
+        <div class="mc-dropdown${idx === selectedIdx ? ' selected' : ''}">${escHtml(el.options[el.defaultIndex] || 'Выбрать...')}</div>`;
+    } else if (el.type === 'slider') {
+      const pct = el.max > el.min ? ((el.defaultValue - el.min) / (el.max - el.min)) * 100 : 50;
+      wrap.className = 'mc-slider-wrap';
+      wrap.innerHTML = `
+        <div class="mc-slider-label"><span>${escHtml(el.label || '')}</span><span>${el.defaultValue}</span></div>
+        <div class="mc-slider-track${idx === selectedIdx ? ' selected' : ''}"><div class="mc-slider-fill" style="width:${pct}%"></div></div>`;
+    } else if (el.type === 'step_slider') {
+      const pct = el.steps.length > 1 ? (el.defaultIndex / (el.steps.length - 1)) * 100 : 50;
+      wrap.className = 'mc-step-wrap';
+      wrap.innerHTML = `
+        <div class="mc-step-label">${escHtml(el.label || '')}</div>
+        <div class="mc-step-track${idx === selectedIdx ? ' selected' : ''}"><div class="mc-step-fill" style="width:${pct}%"></div></div>
+        <div class="mc-step-value">${escHtml(el.steps[el.defaultIndex] || '')}</div>`;
+    } else if (el.type === 'toggle') {
+      wrap.className = 'mc-toggle-wrap' + (idx === selectedIdx ? ' selected' : '');
+      wrap.innerHTML = `
+        <span class="mc-toggle-text">${escHtml(el.label || '')}</span>
+        <div class="mc-toggle ${el.defaultValue ? 'on' : 'off'}"></div>`;
+      wrap.querySelector('.mc-toggle').addEventListener('click', (e) => {
+        e.stopPropagation();
+        el.defaultValue = !el.defaultValue;
+        renderPreview();
+      });
+    } else if (el.type === 'label') {
+      wrap.innerHTML = `<div class="mc-label-text${idx === selectedIdx ? ' selected' : ''}">${escHtml(el.text || '')}</div>`;
+    }
+
+    body.appendChild(wrap);
+  });
+}
+
+// ==================== ELEMENT SELECTION & PROPERTIES ====================
+function selectElement(idx) {
+  selectedIdx = idx;
+  renderPreview();
+  renderProperties();
+}
+
+function renderProperties() {
+  const empty = document.getElementById('propsEmpty');
+  const content = document.getElementById('propsContent');
+
+  if (selectedIdx < 0 || selectedIdx >= elements.length) {
+    empty.style.display = '';
+    content.style.display = 'none';
+    return;
+  }
+
+  empty.style.display = 'none';
+  content.style.display = '';
+
+  const el = elements[selectedIdx];
+  let html = '';
+
+  if (el.type === 'button') {
+    html = `
+      <div class="prop-group">
+        <h4>Кнопка #${selectedIdx + 1}</h4>
+        <div class="prop-field">
+          <label>Текст кнопки</label>
+          <input type="text" data-prop="text" value="${escAttr(el.text)}">
+        </div>
+        <div class="prop-field">
+          <label>Тип иконки</label>
+          <div class="icon-type-row">
+            <div class="icon-type-btn${el.iconType === -1 ? ' active' : ''}" data-icon-type="-1">Нет</div>
+            <div class="icon-type-btn${el.iconType === 0 ? ' active' : ''}" data-icon-type="0">Path</div>
+            <div class="icon-type-btn${el.iconType === 1 ? ' active' : ''}" data-icon-type="1">URL</div>
+          </div>
+        </div>
+        ${el.iconType >= 0 ? `
+        <div class="prop-field">
+          <label>${el.iconType === 0 ? 'Путь к текстуре' : 'URL иконки'}</label>
+          <input type="text" data-prop="iconPath" value="${escAttr(el.iconPath)}" placeholder="${el.iconType === 0 ? 'textures/items/diamond' : 'https://...'}">
+        </div>` : ''}
+      </div>`;
+  } else if (el.type === 'modal_btn1' || el.type === 'modal_btn2') {
+    const label = el.type === 'modal_btn1' ? 'Кнопка 1 (true)' : 'Кнопка 2 (false)';
+    html = `
+      <div class="prop-group">
+        <h4>${label}</h4>
+        <div class="prop-field">
+          <label>Текст</label>
+          <input type="text" data-prop="text" value="${escAttr(el.text)}">
+        </div>
+      </div>`;
+  } else if (el.type === 'input') {
+    html = `
+      <div class="prop-group">
+        <h4>Input</h4>
+        <div class="prop-field">
+          <label>Заголовок</label>
+          <input type="text" data-prop="label" value="${escAttr(el.label)}">
+        </div>
+        <div class="prop-field">
+          <label>Placeholder</label>
+          <input type="text" data-prop="placeholder" value="${escAttr(el.placeholder)}">
+        </div>
+        <div class="prop-field">
+          <label>Значение по умолчанию</label>
+          <input type="text" data-prop="defaultValue" value="${escAttr(el.defaultValue)}">
+        </div>
+      </div>`;
+  } else if (el.type === 'dropdown') {
+    html = `
+      <div class="prop-group">
+        <h4>Dropdown</h4>
+        <div class="prop-field">
+          <label>Заголовок</label>
+          <input type="text" data-prop="label" value="${escAttr(el.label)}">
+        </div>
+        <div class="prop-field">
+          <label>Варианты</label>
+          <div class="options-list" id="optionsList">
+            ${el.options.map((opt, i) => `
+              <div class="option-row">
+                <input type="text" data-option-idx="${i}" value="${escAttr(opt)}">
+                <button class="btn btn-danger btn-sm" data-remove-option="${i}">✕</button>
+              </div>
+            `).join('')}
+          </div>
+          <button class="add-option-btn" id="addOptionBtn">+ Добавить вариант</button>
+        </div>
+        <div class="prop-field">
+          <label>Индекс по умолчанию</label>
+          <input type="number" data-prop="defaultIndex" value="${el.defaultIndex}" min="0" max="${el.options.length - 1}">
+        </div>
+      </div>`;
+  } else if (el.type === 'slider') {
+    html = `
+      <div class="prop-group">
+        <h4>Slider</h4>
+        <div class="prop-field">
+          <label>Заголовок</label>
+          <input type="text" data-prop="label" value="${escAttr(el.label)}">
+        </div>
+        <div class="prop-field">
+          <label>Мин</label>
+          <input type="number" data-prop="min" value="${el.min}">
+        </div>
+        <div class="prop-field">
+          <label>Макс</label>
+          <input type="number" data-prop="max" value="${el.max}">
+        </div>
+        <div class="prop-field">
+          <label>Шаг</label>
+          <input type="number" data-prop="step" value="${el.step}" min="1">
+        </div>
+        <div class="prop-field">
+          <label>Значение по умолчанию</label>
+          <input type="number" data-prop="defaultValue" value="${el.defaultValue}">
+        </div>
+      </div>`;
+  } else if (el.type === 'step_slider') {
+    html = `
+      <div class="prop-group">
+        <h4>StepSlider</h4>
+        <div class="prop-field">
+          <label>Заголовок</label>
+          <input type="text" data-prop="label" value="${escAttr(el.label)}">
+        </div>
+        <div class="prop-field">
+          <label>Шаги</label>
+          <div class="options-list" id="optionsList">
+            ${el.steps.map((s, i) => `
+              <div class="option-row">
+                <input type="text" data-step-idx="${i}" value="${escAttr(s)}">
+                <button class="btn btn-danger btn-sm" data-remove-step="${i}">✕</button>
+              </div>
+            `).join('')}
+          </div>
+          <button class="add-option-btn" id="addStepBtn">+ Добавить шаг</button>
+        </div>
+        <div class="prop-field">
+          <label>Индекс по умолчанию</label>
+          <input type="number" data-prop="defaultIndex" value="${el.defaultIndex}" min="0" max="${el.steps.length - 1}">
+        </div>
+      </div>`;
+  } else if (el.type === 'toggle') {
+    html = `
+      <div class="prop-group">
+        <h4>Toggle</h4>
+        <div class="prop-field">
+          <label>Заголовок</label>
+          <input type="text" data-prop="label" value="${escAttr(el.label)}">
+        </div>
+        <div class="prop-field">
+          <label>По умолчанию</label>
+          <select data-prop="defaultValue">
+            <option value="false"${!el.defaultValue ? ' selected' : ''}>Выкл</option>
+            <option value="true"${el.defaultValue ? ' selected' : ''}>Вкл</option>
+          </select>
+        </div>
+      </div>`;
+  } else if (el.type === 'label') {
+    html = `
+      <div class="prop-group">
+        <h4>Label</h4>
+        <div class="prop-field">
+          <label>Текст</label>
+          <textarea data-prop="text">${escHtml(el.text)}</textarea>
+        </div>
+      </div>`;
+  }
+
+  // Move/delete actions (not for modal buttons)
+  if (formType !== 'modal') {
+    html += `
+      <div class="prop-actions">
+        <div class="move-btns">
+          <button class="btn btn-outline btn-sm" id="moveUp" ${selectedIdx === 0 ? 'disabled' : ''}>▲</button>
+          <button class="btn btn-outline btn-sm" id="moveDown" ${selectedIdx === elements.length - 1 ? 'disabled' : ''}>▼</button>
+        </div>
+        <button class="btn btn-outline btn-sm" id="duplicateEl">⧉ Дубль</button>
+        <button class="btn btn-danger btn-sm" id="deleteEl">🗑 Удалить</button>
+      </div>`;
+  }
+
+  content.innerHTML = html;
+  bindPropertyEvents();
+}
+
+function bindPropertyEvents() {
+  const el = elements[selectedIdx];
+  if (!el) return;
+
+  // Input/textarea/select changes
+  document.querySelectorAll('#propsContent [data-prop]').forEach(input => {
+    input.addEventListener('input', () => {
+      const prop = input.dataset.prop;
+      let val = input.value;
+      if (input.type === 'number') val = Number(val);
+      if (prop === 'defaultValue' && input.tagName === 'SELECT') val = val === 'true';
+      el[prop] = val;
+      renderPreview();
+    });
+  });
+
+  // Icon type buttons
+  document.querySelectorAll('#propsContent .icon-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      el.iconType = Number(btn.dataset.iconType);
+      if (el.iconType === -1) el.iconPath = '';
+      renderPreview();
+      renderProperties();
+    });
+  });
+
+  // Dropdown options
+  document.querySelectorAll('#propsContent [data-option-idx]').forEach(input => {
+    input.addEventListener('input', () => {
+      el.options[Number(input.dataset.optionIdx)] = input.value;
+      renderPreview();
+    });
+  });
+  document.querySelectorAll('#propsContent [data-remove-option]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      el.options.splice(Number(btn.dataset.removeOption), 1);
+      if (el.defaultIndex >= el.options.length) el.defaultIndex = Math.max(0, el.options.length - 1);
+      renderPreview();
+      renderProperties();
+    });
+  });
+  const addOpt = document.getElementById('addOptionBtn');
+  if (addOpt) addOpt.addEventListener('click', () => {
+    el.options.push('Вариант ' + (el.options.length + 1));
+    renderPreview();
+    renderProperties();
+  });
+
+  // StepSlider steps
+  document.querySelectorAll('#propsContent [data-step-idx]').forEach(input => {
+    input.addEventListener('input', () => {
+      el.steps[Number(input.dataset.stepIdx)] = input.value;
+      renderPreview();
+    });
+  });
+  document.querySelectorAll('#propsContent [data-remove-step]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      el.steps.splice(Number(btn.dataset.removeStep), 1);
+      if (el.defaultIndex >= el.steps.length) el.defaultIndex = Math.max(0, el.steps.length - 1);
+      renderPreview();
+      renderProperties();
+    });
+  });
+  const addStep = document.getElementById('addStepBtn');
+  if (addStep) addStep.addEventListener('click', () => {
+    el.steps.push('Шаг ' + (el.steps.length + 1));
+    renderPreview();
+    renderProperties();
+  });
+
+  // Move/delete
+  const moveUp = document.getElementById('moveUp');
+  const moveDown = document.getElementById('moveDown');
+  const deleteEl = document.getElementById('deleteEl');
+  const duplicateEl = document.getElementById('duplicateEl');
+
+  if (moveUp) moveUp.addEventListener('click', () => {
+    if (selectedIdx > 0) {
+      [elements[selectedIdx - 1], elements[selectedIdx]] = [elements[selectedIdx], elements[selectedIdx - 1]];
+      selectedIdx--;
+      renderPreview();
+      renderProperties();
+    }
+  });
+  if (moveDown) moveDown.addEventListener('click', () => {
+    if (selectedIdx < elements.length - 1) {
+      [elements[selectedIdx + 1], elements[selectedIdx]] = [elements[selectedIdx], elements[selectedIdx + 1]];
+      selectedIdx++;
+      renderPreview();
+      renderProperties();
+    }
+  });
+  if (deleteEl) deleteEl.addEventListener('click', () => {
+    elements.splice(selectedIdx, 1);
+    selectedIdx = -1;
+    renderPreview();
+    renderProperties();
+  });
+  if (duplicateEl) duplicateEl.addEventListener('click', () => {
+    const copy = JSON.parse(JSON.stringify(el));
+    elements.splice(selectedIdx + 1, 0, copy);
+    selectedIdx = selectedIdx + 1;
+    renderPreview();
+    renderProperties();
+  });
+}
+
+// ==================== FORM SETTINGS BINDING ====================
+function bindFormSettings() {
+  document.getElementById('formTitle').addEventListener('input', renderPreview);
+  document.getElementById('formContent').addEventListener('input', renderPreview);
+}
+
+// ==================== EXPORT ====================
+function bindExport() {
+  document.getElementById('btnExport').addEventListener('click', () => {
+    generateCode();
+    document.getElementById('exportModal').classList.add('active');
+  });
+
+  document.querySelectorAll('.export-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      document.querySelectorAll('.export-opt').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      exportLib = opt.dataset.lib;
+      generateCode();
+    });
+  });
+
+  document.getElementById('btnCopyCode').addEventListener('click', () => {
+    const code = document.getElementById('codeOutput').textContent;
+    navigator.clipboard.writeText(code).then(() => toast('Код скопирован!'));
+  });
+
+  document.getElementById('btnClear').addEventListener('click', () => {
+    if (confirm('Очистить форму?')) {
+      elements = [];
+      selectedIdx = -1;
+      document.getElementById('formTitle').value = '';
+      document.getElementById('formContent').value = '';
+      renderPreview();
+      renderProperties();
+    }
+  });
+
+  document.getElementById('btnImport').addEventListener('click', () => {
+    document.getElementById('importModal').classList.add('active');
+  });
+
+  document.getElementById('btnDoImport').addEventListener('click', () => {
+    try {
+      const data = JSON.parse(document.getElementById('importJson').value);
+      formType = data.formType || 'simple';
+      document.getElementById('formTitle').value = data.title || '';
+      document.getElementById('formContent').value = data.content || '';
+      elements = data.elements || [];
+      selectedIdx = -1;
+
+      document.querySelectorAll('.form-type-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.type === formType);
+      });
+
+      renderPalette();
+      renderPreview();
+      renderProperties();
+      closeImport();
+      toast('Импортировано!');
+    } catch (e) {
+      alert('Ошибка парсинга JSON: ' + e.message);
+    }
+  });
+}
+
+function generateCode() {
+  const title = document.getElementById('formTitle').value || 'Form';
+  const content = document.getElementById('formContent').value || '';
+  let code = '';
+
+  if (exportLib === 'formapi') {
+    code = generateFormAPI(title, content);
+  } else {
+    code = generatePmforms(title, content);
+  }
+
+  const out = document.getElementById('codeOutput');
+  out.textContent = code;
+}
+
+function generateFormAPI(title, content) {
+  const t = phpStr(title);
+  const c = phpStr(content);
+
+  if (formType === 'simple') {
+    let lines = [];
+    lines.push('use jojoe77777\\FormAPI\\SimpleForm;');
+    lines.push('');
+    lines.push(`$form = new SimpleForm(function(Player $player, ?int $data): void {`);
+    lines.push(`    if ($data === null) return; // Закрыл форму`);
+    lines.push('');
+    if (elements.length > 0) {
+      lines.push('    match ($data) {');
+      elements.forEach((el, i) => {
+        lines.push(`        ${i} => $player->sendMessage(${phpStr(el.text || 'Кнопка ' + (i + 1))}),`);
+      });
+      lines.push('    };');
+    }
+    lines.push('});');
+    lines.push('');
+    lines.push(`$form->setTitle(${t});`);
+    if (content) lines.push(`$form->setContent(${c});`);
+    lines.push('');
+    elements.forEach(el => {
+      if (el.iconType >= 0 && el.iconPath) {
+        lines.push(`$form->addButton(${phpStr(el.text)}, ${el.iconType}, ${phpStr(el.iconPath)});`);
+      } else {
+        lines.push(`$form->addButton(${phpStr(el.text)});`);
+      }
+    });
+    lines.push('');
+    lines.push('$player->sendForm($form);');
+    return lines.join('\n');
+  }
+
+  if (formType === 'modal') {
+    let lines = [];
+    lines.push('use jojoe77777\\FormAPI\\ModalForm;');
+    lines.push('');
+    lines.push(`$form = new ModalForm(function(Player $player, ?bool $data): void {`);
+    lines.push(`    if ($data === null) return; // Закрыл форму`);
+    lines.push('');
+    lines.push('    if ($data) {');
+    lines.push(`        // Нажал "${elements[0]?.text || 'Да'}"`);
+    lines.push(`        $player->sendMessage("Вы нажали ${elements[0]?.text || 'Да'}");`);
+    lines.push('    } else {');
+    lines.push(`        // Нажал "${elements[1]?.text || 'Нет'}"`);
+    lines.push(`        $player->sendMessage("Вы нажали ${elements[1]?.text || 'Нет'}");`);
+    lines.push('    }');
+    lines.push('});');
+    lines.push('');
+    lines.push(`$form->setTitle(${t});`);
+    if (content) lines.push(`$form->setContent(${c});`);
+    lines.push(`$form->setButton1(${phpStr(elements[0]?.text || 'Да')});`);
+    lines.push(`$form->setButton2(${phpStr(elements[1]?.text || 'Нет')});`);
+    lines.push('');
+    lines.push('$player->sendForm($form);');
+    return lines.join('\n');
+  }
+
+  // Custom form
+  let lines = [];
+  lines.push('use jojoe77777\\FormAPI\\CustomForm;');
+  lines.push('');
+  lines.push(`$form = new CustomForm(function(Player $player, ?array $data): void {`);
+  lines.push(`    if ($data === null) return; // Закрыл форму`);
+  lines.push('');
+  elements.forEach((el, i) => {
+    if (el.type === 'label') return;
+    const comment = el.label || el.text || el.type;
+    lines.push(`    // $data[${i}] — ${comment}`);
+    if (el.type === 'input') {
+      lines.push(`    $${varName(el.label || 'input' + i)} = (string) $data[${i}];`);
+    } else if (el.type === 'dropdown') {
+      lines.push(`    $${varName(el.label || 'dropdown' + i)} = (int) $data[${i}]; // Индекс выбранного`);
+    } else if (el.type === 'slider') {
+      lines.push(`    $${varName(el.label || 'slider' + i)} = (float) $data[${i}];`);
+    } else if (el.type === 'step_slider') {
+      lines.push(`    $${varName(el.label || 'step' + i)} = (int) $data[${i}]; // Индекс шага`);
+    } else if (el.type === 'toggle') {
+      lines.push(`    $${varName(el.label || 'toggle' + i)} = (bool) $data[${i}];`);
+    }
+  });
+  lines.push('});');
+  lines.push('');
+  lines.push(`$form->setTitle(${t});`);
+  lines.push('');
+  elements.forEach(el => {
+    if (el.type === 'input') {
+      lines.push(`$form->addInput(${phpStr(el.label)}, ${phpStr(el.placeholder)}${el.defaultValue ? ', ' + phpStr(el.defaultValue) : ''});`);
+    } else if (el.type === 'dropdown') {
+      lines.push(`$form->addDropdown(${phpStr(el.label)}, [${el.options.map(o => phpStr(o)).join(', ')}]${el.defaultIndex > 0 ? ', ' + el.defaultIndex : ''});`);
+    } else if (el.type === 'slider') {
+      lines.push(`$form->addSlider(${phpStr(el.label)}, ${el.min}, ${el.max}, ${el.step}${el.defaultValue !== el.min ? ', ' + el.defaultValue : ''});`);
+    } else if (el.type === 'step_slider') {
+      lines.push(`$form->addStepSlider(${phpStr(el.label)}, [${el.steps.map(s => phpStr(s)).join(', ')}]${el.defaultIndex > 0 ? ', ' + el.defaultIndex : ''});`);
+    } else if (el.type === 'toggle') {
+      lines.push(`$form->addToggle(${phpStr(el.label)}${el.defaultValue ? ', true' : ''});`);
+    } else if (el.type === 'label') {
+      lines.push(`$form->addLabel(${phpStr(el.text)});`);
+    }
+  });
+  lines.push('');
+  lines.push('$player->sendForm($form);');
+  return lines.join('\n');
+}
+
+function generatePmforms(title, content) {
+  const t = phpStr(title);
+  const c = phpStr(content);
+
+  if (formType === 'simple') {
+    let lines = [];
+    lines.push('use dktapps\\pmforms\\MenuForm;');
+    lines.push('use dktapps\\pmforms\\MenuOption;');
+    lines.push('use dktapps\\pmforms\\FormIcon;');
+    lines.push('');
+    lines.push(`$form = new MenuForm(`);
+    lines.push(`    ${t},`);
+    lines.push(`    ${c},`);
+    lines.push('    [');
+    elements.forEach((el, i) => {
+      if (el.iconType >= 0 && el.iconPath) {
+        const iconType = el.iconType === 0 ? 'FormIcon::IMAGE_TYPE_PATH' : 'FormIcon::IMAGE_TYPE_URL';
+        lines.push(`        new MenuOption(${phpStr(el.text)}, new FormIcon(${phpStr(el.iconPath)}, ${iconType})),`);
+      } else {
+        lines.push(`        new MenuOption(${phpStr(el.text)}),`);
+      }
+    });
+    lines.push('    ],');
+    lines.push('    onSubmit: function(Player $player, int $selectedOption): void {');
+    lines.push('        match ($selectedOption) {');
+    elements.forEach((el, i) => {
+      lines.push(`            ${i} => $player->sendMessage(${phpStr(el.text || 'Кнопка ' + (i + 1))}),`);
+    });
+    lines.push('        };');
+    lines.push('    },');
+    lines.push('    onClose: function(Player $player): void {');
+    lines.push('        // Закрыл форму');
+    lines.push('    }');
+    lines.push(');');
+    lines.push('');
+    lines.push('$player->sendForm($form);');
+    return lines.join('\n');
+  }
+
+  if (formType === 'modal') {
+    let lines = [];
+    lines.push('use dktapps\\pmforms\\ModalForm;');
+    lines.push('');
+    lines.push(`$form = new ModalForm(`);
+    lines.push(`    ${t},`);
+    lines.push(`    ${c},`);
+    lines.push(`    onSubmit: function(Player $player, bool $choice): void {`);
+    lines.push(`        if ($choice) {`);
+    lines.push(`            // Нажал "${elements[0]?.text || 'Да'}"`);
+    lines.push('        } else {');
+    lines.push(`            // Нажал "${elements[1]?.text || 'Нет'}"`);
+    lines.push('        }');
+    lines.push('    },');
+    lines.push(`    yesButtonText: ${phpStr(elements[0]?.text || 'Да')},`);
+    lines.push(`    noButtonText: ${phpStr(elements[1]?.text || 'Нет')}`);
+    lines.push(');');
+    lines.push('');
+    lines.push('$player->sendForm($form);');
+    return lines.join('\n');
+  }
+
+  // Custom
+  let lines = [];
+  lines.push('use dktapps\\pmforms\\CustomForm;');
+  lines.push('use dktapps\\pmforms\\CustomFormResponse;');
+  lines.push('use dktapps\\pmforms\\element\\Input;');
+  lines.push('use dktapps\\pmforms\\element\\Dropdown;');
+  lines.push('use dktapps\\pmforms\\element\\Slider;');
+  lines.push('use dktapps\\pmforms\\element\\StepSlider;');
+  lines.push('use dktapps\\pmforms\\element\\Toggle;');
+  lines.push('use dktapps\\pmforms\\element\\Label;');
+  lines.push('');
+  lines.push(`$form = new CustomForm(`);
+  lines.push(`    ${t},`);
+  lines.push('    [');
+  elements.forEach(el => {
+    if (el.type === 'input') {
+      lines.push(`        new Input(${phpStr(el.label)}, ${phpStr(el.placeholder)}${el.defaultValue ? ', ' + phpStr(el.defaultValue) : ''}),`);
+    } else if (el.type === 'dropdown') {
+      lines.push(`        new Dropdown(${phpStr(el.label)}, [${el.options.map(o => phpStr(o)).join(', ')}]${el.defaultIndex > 0 ? ', ' + el.defaultIndex : ''}),`);
+    } else if (el.type === 'slider') {
+      lines.push(`        new Slider(${phpStr(el.label)}, ${el.min}, ${el.max}, ${el.step}${el.defaultValue !== el.min ? ', ' + el.defaultValue : ''}),`);
+    } else if (el.type === 'step_slider') {
+      lines.push(`        new StepSlider(${phpStr(el.label)}, [${el.steps.map(s => phpStr(s)).join(', ')}]${el.defaultIndex > 0 ? ', ' + el.defaultIndex : ''}),`);
+    } else if (el.type === 'toggle') {
+      lines.push(`        new Toggle(${phpStr(el.label)}${el.defaultValue ? ', true' : ''}),`);
+    } else if (el.type === 'label') {
+      lines.push(`        new Label(${phpStr(el.text)}),`);
+    }
+  });
+  lines.push('    ],');
+  lines.push('    onSubmit: function(Player $player, CustomFormResponse $response): void {');
+  let ri = 0;
+  elements.forEach(el => {
+    if (el.type === 'label') { ri++; return; }
+    const vn = varName(el.label || el.type + ri);
+    if (el.type === 'input') lines.push(`        $${vn} = $response->getString(${ri});`);
+    else if (el.type === 'dropdown') lines.push(`        $${vn} = $response->getInt(${ri});`);
+    else if (el.type === 'slider') lines.push(`        $${vn} = $response->getFloat(${ri});`);
+    else if (el.type === 'step_slider') lines.push(`        $${vn} = $response->getInt(${ri});`);
+    else if (el.type === 'toggle') lines.push(`        $${vn} = $response->getBool(${ri});`);
+    ri++;
+  });
+  lines.push('    },');
+  lines.push('    onClose: function(Player $player): void {');
+  lines.push('        // Закрыл форму');
+  lines.push('    }');
+  lines.push(');');
+  lines.push('');
+  lines.push('$player->sendForm($form);');
+  return lines.join('\n');
+}
+
+// ==================== HELPERS ====================
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function phpStr(s) { return '"' + String(s).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\$/g,'\\$') + '"'; }
+function varName(s) {
+  return String(s).toLowerCase()
+    .replace(/[а-яёА-ЯЁ]+/g, m => transliterate(m))
+    .replace(/[^a-z0-9_]/gi, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    || 'value';
+}
+function transliterate(s) {
+  const map = {'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'};
+  return s.split('').map(c => map[c.toLowerCase()] || c).join('');
+}
+
+function toast(msg = 'Скопировано!') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1200);
+}
+
+function closeExport() { document.getElementById('exportModal').classList.remove('active'); }
+function closeImport() { document.getElementById('importModal').classList.remove('active'); }
+
+// Close modals on backdrop click
+document.getElementById('exportModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeExport(); });
+document.getElementById('importModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeImport(); });
+
+// ==================== JSON EXPORT (for import/export) ====================
+// Attach to export modal — add JSON button
+document.getElementById('btnExport').addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const data = {
+    formType,
+    title: document.getElementById('formTitle').value,
+    content: document.getElementById('formContent').value,
+    elements
+  };
+  navigator.clipboard.writeText(JSON.stringify(data, null, 2)).then(() => toast('JSON скопирован!'));
+});
+
+// ==================== START ====================
+init();
+</script>
+</body>
+</html>
