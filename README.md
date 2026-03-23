@@ -33,7 +33,7 @@ Stop writing button arrays by hand. Design your forms visually, see exactly how 
 4. Click elements on the preview to edit properties
 5. Hit **Export PHP** and copy the code into your plugin
 
-Or use the hosted version: **[formapi-craft.github.io](https://formapi-craft.github.io)** *(coming soon)*
+Or use the hosted version: **[w1zardz.github.io/formapi-craft](https://w1zardz.github.io/formapi-craft/)**
 
 ## Supported Elements
 
@@ -113,6 +113,10 @@ PRs and issues are welcome! If you have ideas for new features:
 - Better Minecraft preview accuracy
 - Code generation for other form libraries
 - Localization
+
+## Related Tools
+
+- [Bedrock Glyph Drawer](https://github.com/w1zardz/bedrock-glyph-drawer) — Pixel editor for Minecraft Bedrock custom fonts and glyphs
 
 ## Built With
 
